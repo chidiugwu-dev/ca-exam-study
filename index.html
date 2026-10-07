@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#1d4e89">
+<script>/* apply saved theme before first paint */(function(){var t="auto";try{var s=JSON.parse(localStorage.getItem("caah26:settings")||"null");if(s&&(s.theme==="light"||s.theme==="dark"))t=s.theme;}catch(e){}var r=document.documentElement;if(t!=="auto")r.setAttribute("data-theme",t);var d=t==="dark";if(t==="auto"){try{d=window.matchMedia("(prefers-color-scheme: dark)").matches;}catch(e){}}var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",d?"#0e1217":"#1d4e89");})();</script>
 <title>CA Exam Study</title>
 <meta name="description" content="California Accident &amp; Health exam prep: 6-day plan, 395 practice questions, flashcards, timed mock. Works offline.">
 <meta property="og:title" content="CA Exam Study">
@@ -181,7 +182,7 @@ svg.chart text{fill:var(--muted);font-size:10px}
 </head>
 <body>
 <div id="shell">
-<header class="topbar"><div class="brand">CA A&amp;H Exam<small>Exam: Tue Oct 13, 2026 · offline study app</small></div><button class="btn sm themeBtn" id="topTheme" type="button">Theme</button></header>
+<header class="topbar"><div class="brand">CA A&amp;H Exam<small>Exam: Tue Oct 13, 2026 · offline study app</small></div><button class="btn sm themeBtn" id="topTheme" type="button" aria-label="Theme, tap to change">Theme</button></header>
 <div id="banner" class="banner" role="alert" hidden>Progress can't be saved in this browser (storage is blocked or full, e.g. private mode or an in-app preview). It works for this session only. Open the file in Chrome or Safari, or use Scores → Export to keep a copy.</div>
 <main id="view" tabindex="-1"><noscript><p>This study app needs JavaScript. Open the file in Chrome, Safari, Edge, or Firefox.</p></noscript></main>
 </div>
@@ -283,8 +284,18 @@ function download(name, text, mime){
 }
 
 /* ---------- theme ---------- */
-function applyTheme(){ var t = S.settings.theme; if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme'); var lbl = 'Theme: ' + (t === 'light' ? 'Light' : t === 'dark' ? 'Dark' : 'Auto'); $all('.themeBtn').forEach(function(b){ b.textContent = lbl; b.setAttribute('aria-label', lbl + ' (tap to change)'); }); }
-function cycleTheme(){ var t = S.settings.theme; S.settings.theme = t === 'auto' ? 'dark' : t === 'dark' ? 'light' : 'auto'; save('settings'); applyTheme(); }
+function phoneIsDark(){ try { return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches); } catch(e){ return false; } }
+function applyTheme(){
+  var t = S.settings.theme; if (t !== 'light' && t !== 'dark') t = 'auto';
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  var word = t === 'light' ? 'Light' : t === 'dark' ? 'Dark' : 'Auto';
+  var lbl = t === 'light' ? '\u2600 Light' : t === 'dark' ? '\u263E Dark' : 'Auto';
+  var aria = 'Theme: ' + word + (t === 'auto' ? ' (follows phone)' : '') + ', tap to change';
+  $all('.themeBtn').forEach(function(b){ b.textContent = lbl; b.setAttribute('aria-label', aria); b.setAttribute('title', aria); });
+  var m = document.querySelector('meta[name="theme-color"]'); if (m) m.setAttribute('content', (t === 'dark' || (t === 'auto' && phoneIsDark())) ? '#0e1217' : '#1d4e89');
+}
+function cycleTheme(){ var t = S.settings.theme; S.settings.theme = t === 'light' ? 'dark' : t === 'dark' ? 'auto' : 'light'; save('settings'); applyTheme(); }
+(function(){ try { var mq = window.matchMedia('(prefers-color-scheme: dark)'), h = function(){ if (S.settings.theme !== 'light' && S.settings.theme !== 'dark') applyTheme(); }; if (mq.addEventListener) mq.addEventListener('change', h); else if (mq.addListener) mq.addListener(h); } catch(e){} })();
 
 /* ---------- recording progress (cumulative, never keyed by day) ---------- */
 function recordAnswer(qid, chosen, ts, attemptId){
