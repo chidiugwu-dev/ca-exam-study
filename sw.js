@@ -9,17 +9,22 @@ self.addEventListener('install', e => {
     .then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil((async () => {
+  const done = (async () => {
     const keys = await caches.keys();
     const old = keys.filter(k => k !== CACHE);
     await Promise.all(old.map(k => caches.delete(k)));
     await self.clients.claim();
-    // Upgrade (not first install): reload open pages once so they show the new version now.
-    if (old.length) {
-      const wins = await self.clients.matchAll({type: 'window'});
-      await Promise.all(wins.map(w => w.navigate(w.url).catch(() => {})));
-    }
-  })());
+    return old.length > 0;
+  })();
+  e.waitUntil(done);
+  // Upgrade (not first install): once activation has finished, reload open pages one time so they
+  // show the new version. Not awaited inside waitUntil, so the reload's fetch can't deadlock activation.
+  done.then(upgraded => {
+    if (!upgraded) return;
+    self.clients.matchAll({type: 'window'}).then(wins => wins.forEach(w => {
+      if (typeof w.navigate === 'function') w.navigate(w.url).catch(() => {});
+    }));
+  });
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
